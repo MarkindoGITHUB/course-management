@@ -1,0 +1,246 @@
+import os
+import shutil
+import subprocess
+import tkinter as tk
+from tkinter import ttk, simpledialog
+
+class CriarAbrirPastaGUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Criar e Abrir Pasta")
+
+        # Diretório padrão (substitua pelo caminho desejado)
+        self.diretorio_padrao = r"C:\Users\marco\OneDrive\Documentos\Aleatorio"
+
+        # Variável de controle para a entrada de texto
+        self.nome_pasta_var = tk.StringVar()
+
+        # Dicionário para armazenar os cursos disponíveis
+        self.cursos_disponiveis = {}
+
+        # Entrada de texto para o nome da pasta
+        self.nome_pasta_entry = ttk.Entry(root, textvariable=self.nome_pasta_var, width=30)
+        self.nome_pasta_entry.grid(row=0, column=0, padx=10, pady=5)
+
+        # Botão para criar a pasta
+        criar_pasta_button = ttk.Button(root, text="Criar Pasta", command=self.criar_pasta)
+        criar_pasta_button.grid(row=1, column=1, pady=10, sticky='w')
+
+        # Botão para abrir a pasta
+        abrir_pasta_button = ttk.Button(root, text="Abrir Pasta", command=self.abrir_pasta)
+        abrir_pasta_button.grid(row=1, column=0, pady=10, sticky='w')
+
+        # Botão para abrir a janela de adicionar cursos
+        adicionar_cursos_button = ttk.Button(root, text="Adicionar Cursos", command=self.abrir_janela_adicionar_cursos)
+        adicionar_cursos_button.grid(row=2, column=0, pady=10, sticky='w')
+
+        # Botão para excluir matrícula
+        excluir_matricula_button = ttk.Button(root, text="Excluir Matrícula", command=self.abrir_janela_excluir_matricula)
+        excluir_matricula_button.grid(row=2, column=1, pady=10, sticky='w')
+
+        # Botão para sair
+        sair_button = ttk.Button(root, text="Sair", command=root.quit)
+        sair_button.grid(row=5, column=0, pady=10, sticky='w')
+
+        # Lista de cursos disponíveis (declarada aqui para evitar erros de escopo)
+        self.cursos_disponiveis_listbox = None
+
+        # Associar a tecla Enter para chamar a função criar_pasta
+        root.bind('<Return>', lambda event: self.criar_pasta())
+
+        # Centralizar a janela
+        self.centralizar_janela()
+
+    def centralizar_janela(self):
+        largura_janela = 320
+        altura_janela = 180
+
+        largura_tela = self.root.winfo_screenwidth()
+        altura_tela = self.root.winfo_screenheight()
+
+        x_pos = (largura_tela - largura_janela) // 2
+        y_pos = (altura_tela - altura_janela) // 2
+
+        self.root.geometry(f"{largura_janela}x{altura_janela}+{x_pos}+{y_pos}")
+
+    def criar_pasta(self):
+        # Obter o nome da pasta da entrada de texto
+        nome_pasta = self.nome_pasta_var.get()
+
+        # Caminho completo para a nova pasta
+        caminho_pasta = os.path.join(self.diretorio_padrao, nome_pasta)
+
+        # Verificar se a pasta já existe
+        if not os.path.exists(caminho_pasta):
+            # Se não existir, criar a pasta
+            os.makedirs(caminho_pasta)
+            print(f'A pasta "{nome_pasta}" foi criada em "{self.diretorio_padrao}".')
+        else:
+            print(f'A pasta "{nome_pasta}" já existe em "{self.diretorio_padrao}".')
+
+    def abrir_pasta(self):
+        # Obter o nome da pasta da entrada de texto
+        nome_pasta = self.nome_pasta_var.get()
+
+        # Caminho completo para a pasta
+        caminho_pasta = os.path.join(self.diretorio_padrao, nome_pasta)
+
+        # Verificar se a pasta existe
+        if os.path.exists(caminho_pasta):
+            # Se existir, abrir a pasta
+            self.abrir_pasta_no_explorador(caminho_pasta)
+        else:
+            print(f'A pasta "{nome_pasta}" não existe em "{self.diretorio_padrao}".')
+
+    def abrir_pasta_no_explorador(self, caminho_pasta):
+        try:
+            # Verificar o sistema operacional
+            if os.name == 'nt':  # Windows
+                subprocess.Popen(['explorer', caminho_pasta], shell=True)
+            elif os.name == 'posix':  # Linux ou macOS
+                subprocess.Popen(['xdg-open', caminho_pasta])
+            else:
+                print("Sistema operacional não suportado para abrir a pasta automaticamente.")
+        except Exception as e:
+            print(f"Erro ao abrir a pasta: {e}")
+
+    def abrir_janela_adicionar_cursos(self):
+        janela_adicionar_cursos = tk.Toplevel(self.root)
+        janela_adicionar_cursos.title("Adicionar Cursos")
+
+        # Variáveis de controle
+        nome_pasta_var = tk.StringVar()
+
+        # Entrada de texto para o nome da pasta
+        ttk.Label(janela_adicionar_cursos, text="Nome da Pasta:").grid(row=0, column=0, padx=10, pady=10)
+        nome_pasta_entry = ttk.Entry(janela_adicionar_cursos, textvariable=nome_pasta_var, width=30)
+        nome_pasta_entry.grid(row=0, column=1, padx=10, pady=10)
+
+        # Botão para adicionar cursos à pasta
+        adicionar_cursos_button = ttk.Button(janela_adicionar_cursos, text="Adicionar", command=lambda: self.adicionar_cursos(nome_pasta_var.get(), self.cursos_disponiveis_listbox))
+        adicionar_cursos_button.grid(row=1, column=0, pady=10, sticky='w')
+
+        # Botão para criar curso
+        criar_curso_button = ttk.Button(janela_adicionar_cursos, text="Criar Curso", command=self.criar_curso)
+        criar_curso_button.grid(row=2, column=0, pady=10, sticky='w')
+
+        # Botão para excluir curso
+        excluir_curso_button = ttk.Button(janela_adicionar_cursos, text="Excluir Curso", command=self.excluir_curso)
+        excluir_curso_button.grid(row=3, column=0, pady=10, sticky='w')
+
+        # Lista de cursos disponíveis
+        cursos_disponiveis_listbox = tk.Listbox(janela_adicionar_cursos, selectmode=tk.MULTIPLE, width=40)
+        cursos_disponiveis_listbox.grid(row=1, column=1, rowspan=4, padx=10, pady=10, sticky='e')
+
+        # Preencher a lista de cursos disponíveis
+        self.cursos_disponiveis_listbox = cursos_disponiveis_listbox
+        self.atualizar_cursos_disponiveis()
+
+        # Ajuste do tamanho da janela
+        largura_janela_adicionar_cursos = 380
+        altura_janela_adicionar_cursos = 260
+        x_pos = (janela_adicionar_cursos.winfo_screenwidth() - largura_janela_adicionar_cursos) // 2
+        y_pos = (janela_adicionar_cursos.winfo_screenheight() - altura_janela_adicionar_cursos) // 2
+        janela_adicionar_cursos.geometry(f"{largura_janela_adicionar_cursos}x{altura_janela_adicionar_cursos}+{x_pos}+{y_pos}")
+
+    def adicionar_cursos(self, nome_pasta, cursos_disponiveis_listbox):
+        indices_cursos = cursos_disponiveis_listbox.curselection()
+
+        if indices_cursos:
+            for index in indices_cursos:
+                nome_curso = cursos_disponiveis_listbox.get(index)
+                caminho_pasta = os.path.join(self.diretorio_padrao, nome_pasta, nome_curso)
+
+                if not os.path.exists(caminho_pasta):
+                    os.makedirs(caminho_pasta)
+                    print(f'A pasta do curso "{nome_curso}" foi adicionada em "{caminho_pasta}".')
+                else:
+                    print(f'A pasta do curso "{nome_curso}" já existe em "{caminho_pasta}".')
+
+            # Atualizar a lista de cursos disponíveis
+            self.atualizar_cursos_disponiveis()
+
+    def excluir_curso(self):
+        # Obter o curso selecionado na lista
+        indices_cursos = self.cursos_disponiveis_listbox.curselection()
+
+        if indices_cursos:
+            # Obter o valor atual da entrada de texto para nome_pasta
+            nome_pasta = self.nome_pasta_var.get()
+
+            for index in reversed(indices_cursos):
+                # Obter o nome do curso como uma string
+                nome_curso = str(self.cursos_disponiveis_listbox.get(index))
+
+                # Construir o caminho da pasta usando a string do nome do curso
+                caminho_pasta = os.path.join(self.diretorio_padrao, nome_pasta, nome_curso)
+
+                # Armazenar o resultado de os.path.exists(caminho_pasta) em uma variável
+                pasta_existe = os.path.exists(caminho_pasta)
+
+                print(f'Caminho da pasta: {caminho_pasta}')
+                
+                # Verificar se a pasta existe antes de tentar excluir
+                if pasta_existe:
+                    try:
+                        # Remover a pasta e seu conteúdo
+                        shutil.rmtree(caminho_pasta)
+                        print(f'A pasta do curso "{nome_curso}" foi excluída em "{caminho_pasta}".')
+                    except Exception as e:
+                        print(f"Erro ao excluir a pasta do curso {nome_curso}: {e}")
+                else:
+                    print(f'A pasta do curso "{nome_curso}" não existe em "{caminho_pasta}".')
+
+            # Atualizar a lista de cursos disponíveis
+            self.atualizar_cursos_disponiveis()
+
+    def abrir_janela_excluir_matricula(self):
+        janela_excluir_matricula = tk.Toplevel(self.root)
+        janela_excluir_matricula.title("Excluir Matrícula")
+
+        # Variáveis de controle
+        nome_pasta_var = tk.StringVar()
+
+        # Entrada de texto para o nome da pasta
+        ttk.Label(janela_excluir_matricula, text="Nome da Pasta:").grid(row=0, column=0, padx=10, pady=10)
+        nome_pasta_entry = ttk.Entry(janela_excluir_matricula, textvariable=nome_pasta_var, width=30)
+        nome_pasta_entry.grid(row=0, column=1, padx=10, pady=10)
+
+        # Botão para excluir matrícula
+        excluir_matricula_button = ttk.Button(janela_excluir_matricula, text="Excluir Matrícula", command=lambda: self.excluir_matricula(nome_pasta_var.get()))
+        excluir_matricula_button.grid(row=1, column=0, columnspan=2, pady=10)
+
+        # Centralizar a janela de excluir matrícula
+        self.centralizar_subjanela(janela_excluir_matricula)
+
+    def excluir_matricula(self, nome_pasta):
+        # Caminho completo para a pasta a ser excluída
+        caminho_pasta = os.path.join(self.diretorio_padrao, nome_pasta)
+
+        try:
+            # Remover a pasta e seu conteúdo
+            shutil.rmtree(caminho_pasta)
+            print(f'A pasta "{nome_pasta}" foi excluída em "{caminho_pasta}".')
+        except Exception as e:
+            print(f"Erro ao excluir a pasta {nome_pasta}: {e}")
+
+    def criar_curso(self):
+        # Obter o nome do curso usando o simpledialog
+        nome_curso = simpledialog.askstring("Criar Curso", "Nome do Curso:")
+
+        if nome_curso:
+            self.cursos_disponiveis[nome_curso] = True
+            print(f'O curso "{nome_curso}" foi criado.')
+
+            # Atualizar a lista de cursos disponíveis
+            self.atualizar_cursos_disponiveis()
+
+    def atualizar_cursos_disponiveis(self):
+        # Atualizar a lista de cursos disponíveis
+        self.cursos_disponiveis_listbox.delete(0, tk.END)
+        self.cursos_disponiveis_listbox.insert(tk.END, *list(self.cursos_disponiveis.keys()))
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = CriarAbrirPastaGUI(root)
+    root.mainloop()
